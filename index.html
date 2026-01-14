@@ -1,64 +1,132 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>No-Money Blackjack</title>
+  <meta charset="UTF-8">
+  <title>Blackjack</title>
   <style>
-    body { font-family: sans-serif; background: #0b5; color: white; text-align: center; padding: 20px; }
-    button { padding: 10px 20px; margin: 10px; font-size: 18px; }
-    #log { margin-top: 20px; white-space: pre-line; }
+    body {
+      background: #0a0f25;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      padding-top: 30px;
+    }
+    .table {
+      background: #122041;
+      padding: 20px;
+      border-radius: 12px;
+      width: 350px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    }
+    h1 { font-size: 24px; margin-bottom: 10px; }
+
+    .hand {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .card {
+      background: #fff;
+      color: #000;
+      width: 60px;
+      height: 90px;
+      border-radius: 6px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.4);
+    }
+
+    button {
+      background: #1c8cff;
+      border: none;
+      padding: 10px 20px;
+      color: white;
+      font-size: 16px;
+      border-radius: 6px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    button:hover { background: #006be6; }
+
+    #result {
+      margin-top: 12px;
+      font-size: 18px;
+      min-height: 20px;
+    }
   </style>
 </head>
 <body>
-  <h1>Blackjack (No Money)</h1>
+<div class="table">
+  <h1>Blackjack</h1>
+
+  <div><strong>Dealer</strong></div>
+  <div id="dealer" class="hand"></div>
+
+  <div><strong>You</strong></div>
+  <div id="player" class="hand"></div>
+
+  <div id="result"></div>
+
   <button onclick="hit()">Hit</button>
   <button onclick="stand()">Stand</button>
-  <div id="log"></div>
+  <button onclick="resetGame()">New Game</button>
+</div>
 
 <script>
 let deck, player, dealer;
 
-function newGame() {
+function resetGame() {
   deck = [];
-  for (let i = 0; i < 4; i++) { deck.push(...[2,3,4,5,6,7,8,9,10,10,10,10,11]); }
+  for (let i=0;i<4;i++) deck.push(...[2,3,4,5,6,7,8,9,10,10,10,10,11]);
   player = [draw(), draw()];
   dealer = [draw(), draw()];
-  log(`You: ${player} (${value(player)})\nDealer shows: ${dealer[0]}`);
+  updateUI();
 }
-
 function draw() { return deck[Math.floor(Math.random()*deck.length)]; }
 
 function value(hand) {
   let t = hand.reduce((a,b)=>a+b,0);
-  while (t > 21 && hand.includes(11)) {
+  while (t>21 && hand.includes(11)) {
     hand[hand.indexOf(11)] = 1;
     t = hand.reduce((a,b)=>a+b,0);
   }
   return t;
 }
 
+function updateUI() {
+  document.getElementById("player").innerHTML =
+    player.map(c=>`<div class="card">${c}</div>`).join("");
+
+  document.getElementById("dealer").innerHTML =
+    dealer.map(c=>`<div class="card">${c}</div>`).join("");
+
+  document.getElementById("result").innerText =
+    `Player ${value(player)} | Dealer ${value(dealer)}`;
+}
+
 function hit() {
   player.push(draw());
   if (value(player) > 21) {
-    log(`You busted!\nYour hand: ${player} (${value(player)})`);
-  } else {
-    log(`You: ${player} (${value(player)})\nDealer shows: ${dealer[0]}`);
-  }
+    updateUI();
+    document.getElementById("result").innerText = "Bust! Dealer wins 😭";
+  } else updateUI();
 }
 
 function stand() {
-  log(`Dealer reveals: ${dealer}`);
   while (value(dealer) < 17) dealer.push(draw());
-  finish();
+  updateUI();
+  let p=value(player), d=value(dealer);
+  document.getElementById("result").innerText =
+    d>21||p>d?"You win 😎":p==d?"Tie":"Dealer wins 😬";
 }
 
-function finish() {
-  let p = value(player), d = value(dealer);
-  log(`Final:\nYou: ${player} (${p})\nDealer: ${dealer} (${d})\n` +
-    (d>21||p>d?'You win!':p==d?'Tie!':'Dealer wins!'));
-}
-
-function log(msg) { document.getElementById("log").innerText = msg; }
-newGame();
+resetGame();
 </script>
 </body>
 </html>
