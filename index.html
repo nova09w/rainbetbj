@@ -1,53 +1,64 @@
-import random
+<!DOCTYPE html>
+<html>
+<head>
+  <title>No-Money Blackjack</title>
+  <style>
+    body { font-family: sans-serif; background: #0b5; color: white; text-align: center; padding: 20px; }
+    button { padding: 10px 20px; margin: 10px; font-size: 18px; }
+    #log { margin-top: 20px; white-space: pre-line; }
+  </style>
+</head>
+<body>
+  <h1>Blackjack (No Money)</h1>
+  <button onclick="hit()">Hit</button>
+  <button onclick="stand()">Stand</button>
+  <div id="log"></div>
 
-# Deck: 4 suits, values 2–10 + face cards worth 10, Ace is 11 (simple rules)
-deck = [2,3,4,5,6,7,8,9,10,10,10,10,11] * 4
+<script>
+let deck, player, dealer;
 
-def draw_card():
-    return random.choice(deck)
+function newGame() {
+  deck = [];
+  for (let i = 0; i < 4; i++) { deck.push(...[2,3,4,5,6,7,8,9,10,10,10,10,11]); }
+  player = [draw(), draw()];
+  dealer = [draw(), draw()];
+  log(`You: ${player} (${value(player)})\nDealer shows: ${dealer[0]}`);
+}
 
-def hand_value(cards):
-    total = sum(cards)
-    # Handle Ace as 1 instead of 11 if needed
-    while total > 21 and 11 in cards:
-        cards[cards.index(11)] = 1
-        total = sum(cards)
-    return total
+function draw() { return deck[Math.floor(Math.random()*deck.length)]; }
 
-def play():
-    print("Welcome to Blackjack (no money version)!")
-    player = [draw_card(), draw_card()]
-    dealer = [draw_card(), draw_card()]
+function value(hand) {
+  let t = hand.reduce((a,b)=>a+b,0);
+  while (t > 21 && hand.includes(11)) {
+    hand[hand.indexOf(11)] = 1;
+    t = hand.reduce((a,b)=>a+b,0);
+  }
+  return t;
+}
 
-    while True:
-        print(f"Your hand: {player} = {hand_value(player)}")
-        print(f"Dealer shows: {dealer[0]}")
-        move = input("Hit or Stand? (h/s): ").lower()
+function hit() {
+  player.push(draw());
+  if (value(player) > 21) {
+    log(`You busted!\nYour hand: ${player} (${value(player)})`);
+  } else {
+    log(`You: ${player} (${value(player)})\nDealer shows: ${dealer[0]}`);
+  }
+}
 
-        if move == 'h':
-            player.append(draw_card())
-            if hand_value(player) > 21:
-                print(f"You busted! Your hand was {player}")
-                return
-        else:
-            break
+function stand() {
+  log(`Dealer reveals: ${dealer}`);
+  while (value(dealer) < 17) dealer.push(draw());
+  finish();
+}
 
-    print(f"Dealer reveals: {dealer}")
-    while hand_value(dealer) < 17:
-        dealer.append(draw_card())
+function finish() {
+  let p = value(player), d = value(dealer);
+  log(`Final:\nYou: ${player} (${p})\nDealer: ${dealer} (${d})\n` +
+    (d>21||p>d?'You win!':p==d?'Tie!':'Dealer wins!'));
+}
 
-    player_total = hand_value(player)
-    dealer_total = hand_value(dealer)
-    print(f"\nFinal:")
-    print(f"Your hand: {player} = {player_total}")
-    print(f"Dealer hand: {dealer} = {dealer_total}")
-
-    if dealer_total > 21 or player_total > dealer_total:
-        print("You win!")
-    elif dealer_total == player_total:
-        print("Tie!")
-    else:
-        print("Dealer wins!")
-
-if __name__ == "__main__":
-    play()
+function log(msg) { document.getElementById("log").innerText = msg; }
+newGame();
+</script>
+</body>
+</html>
