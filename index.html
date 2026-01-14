@@ -2,153 +2,240 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Blackjack</title>
+  <title>Blackjack Pro</title>
   <style>
+    /* Rainbet-inspired color palette */
+    :root {
+      --bg-color: #0d1526;
+      --panel-color: #1a2438;
+      --accent-blue: #214173;
+      --button-blue: #2a69ff;
+      --text-main: #ffffff;
+      --text-dim: #94a3b8;
+    }
+
     body {
-      background: #071728;
-      color: #fff;
-      font-family: Arial, sans-serif;
+      background: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       display: flex;
       justify-content: center;
-      padding-top: 20px;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
     }
-    .table {
-      background: #0f1f3a;
-      width: 420px;
-      padding: 20px;
-      border-radius: 14px;
+
+    .game-container {
+      background: var(--panel-color);
+      width: 480px;
+      padding: 30px;
+      border-radius: 20px;
       text-align: center;
-      box-shadow: 0 0 30px rgba(0,0,0,0.6);
+      position: relative;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
     }
-    h1 { font-size: 22px; margin-bottom: 10px; }
+
+    /* The table oval from the image */
+    .table-felt {
+      border: 2px solid var(--accent-blue);
+      border-radius: 50%;
+      padding: 40px 10px;
+      margin: 20px 0;
+      position: relative;
+    }
+
+    .hand-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
 
     .hand {
       display: flex;
       justify-content: center;
-      gap: 12px;
-      margin: 14px 0;
-      min-height: 100px;
+      gap: 10px;
+      min-height: 110px;
+      margin-bottom: 20px;
     }
 
     .card {
       background: #ffffff;
-      color: #000;
-      width: 70px;
-      height: 100px;
-      border-radius: 8px;
+      color: #1a2438;
+      width: 65px;
+      height: 95px;
+      border-radius: 6px;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
-      font-size: 28px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      font-size: 24px;
+      font-weight: bold;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
     }
+
+    .card.red { color: #e11d48; }
+
     .card-hidden {
-      background: #0c2a55;
-      border: 2px solid #1b3f7c;
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+      border: 2px solid #3b82f6;
+    }
+
+    .score-badge {
+      background: var(--accent-blue);
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      display: inline-block;
+      margin-bottom: 15px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 20px;
     }
 
     button {
-      width: 120px;
-      background: #1c8cff;
+      background: var(--button-blue);
       border: none;
-      padding: 10px 0;
+      padding: 12px;
       color: white;
-      font-size: 17px;
-      border-radius: 6px;
-      margin: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 8px;
       cursor: pointer;
+      transition: opacity 0.2s;
     }
-    button:hover { background: #006be6; }
+
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.reset { grid-column: span 2; background: transparent; border: 1px solid var(--accent-blue); margin-top: 10px; }
 
     #result {
-      margin-top: 12px;
-      font-size: 20px;
-      min-height: 26px;
-      font-weight: bold;
+      height: 30px;
+      font-size: 18px;
+      color: #fbbf24;
+      margin-top: 10px;
     }
   </style>
 </head>
 <body>
-<div class="table">
-  <h1>Blackjack</h1>
 
-  <div><strong>Dealer</strong></div>
+<div class="game-container">
+  <div class="hand-label">Dealer</div>
+  <div id="dealer-score" class="score-badge">?</div>
   <div id="dealer" class="hand"></div>
 
-  <div><strong>You</strong></div>
-  <div id="player" class="hand"></div>
+  <div class="table-felt">
+    <div id="result">Ready?</div>
+    <div class="hand-label">Your Hand</div>
+    <div id="player" class="hand"></div>
+    <div id="player-score" class="score-badge">0</div>
+  </div>
 
-  <div id="result"></div>
-
-  <button onclick="hit()">Hit</button>
-  <button onclick="stand()">Stand</button>
-  <button onclick="resetGame()">New Game</button>
+  <div class="controls">
+    <button id="hit-btn" onclick="hit()">Hit</button>
+    <button id="stand-btn" onclick="stand()">Stand</button>
+    <button class="reset" onclick="resetGame()">Deal New Hand</button>
+  </div>
 </div>
 
 <script>
-let deck, player, dealer, reveal;
+let deck, playerHand, dealerHand, isGameOver;
 
 function resetGame() {
   deck = [];
-  for (let i=0;i<4;i++) deck.push(...[2,3,4,5,6,7,8,9,10,10,10,10,11]);
-  player = [draw(), draw()];
-  dealer = [draw(), draw()];
-  reveal = false;
+  const suits = ['♠', '♣', '♥', '♦'];
+  const values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+  
+  for (let s of suits) {
+    for (let v of values) {
+      let weight = parseInt(v);
+      if (['J','Q','K'].includes(v)) weight = 10;
+      if (v === 'A') weight = 11;
+      deck.push({ val: v, suit: s, weight: weight });
+    }
+  }
+  
+  // Shuffle
+  deck.sort(() => Math.random() - 0.5);
+  
+  playerHand = [draw(), draw()];
+  dealerHand = [draw(), draw()];
+  isGameOver = false;
+  
+  document.getElementById("result").innerText = "";
+  document.getElementById("hit-btn").disabled = false;
+  document.getElementById("stand-btn").disabled = false;
   updateUI();
 }
 
-function draw() {
-  return deck[Math.floor(Math.random()*deck.length)];
-}
+function draw() { return deck.pop(); }
 
-function value(hand) {
-  let total = hand.reduce((a,b)=>a+b,0);
-  while (total>21 && hand.includes(11)) {
-    hand[hand.indexOf(11)] = 1;
-    total = hand.reduce((a,b)=>a+b,0);
+function calculateScore(hand) {
+  let total = hand.reduce((a, b) => a + b.weight, 0);
+  let aces = hand.filter(c => c.val === 'A').length;
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces--;
   }
   return total;
 }
 
 function updateUI() {
-  document.getElementById("player").innerHTML =
-    player.map(c=>`<div class="card">${c}</div>`).join("");
+  const pScore = calculateScore(playerHand);
+  
+  document.getElementById("player").innerHTML = playerHand.map(c => 
+    `<div class="card ${c.suit === '♥' || c.suit === '♦' ? 'red' : ''}">${c.val}<div>${c.suit}</div></div>`
+  ).join("");
 
-  let dealerHTML = dealer.map((c,i)=>{
-    if (!reveal && i==1) return `<div class="card card-hidden"></div>`;
-    return `<div class="card">${c}</div>`;
+  document.getElementById("dealer").innerHTML = dealerHand.map((c, i) => {
+    if (!isGameOver && i === 1) return `<div class="card card-hidden"></div>`;
+    return `<div class="card ${c.suit === '♥' || c.suit === '♦' ? 'red' : ''}">${c.val}<div>${c.suit}</div></div>`;
   }).join("");
 
-  document.getElementById("dealer").innerHTML = dealerHTML;
-
-  document.getElementById("result").innerText =
-    reveal
-      ? `Player ${value(player)} | Dealer ${value(dealer)}`
-      : `Player ${value(player)} | Dealer ?`;
+  document.getElementById("player-score").innerText = pScore;
+  document.getElementById("dealer-score").innerText = isGameOver ? calculateScore(dealerHand) : "?";
 }
 
 function hit() {
-  if (reveal) return;
-  player.push(draw());
-  if (value(player) > 21) {
-    reveal = true;
-    updateUI();
-    document.getElementById("result").innerText = "Bust! Dealer wins 😭";
-  } else updateUI();
+  if (isGameOver) return;
+  playerHand.push(draw());
+  if (calculateScore(playerHand) > 21) {
+    endGame("Bust! Dealer Wins.");
+  }
+  updateUI();
 }
 
 function stand() {
-  reveal = true;
-  while (value(dealer) < 17) dealer.push(draw());
+  isGameOver = true;
+  while (calculateScore(dealerHand) < 17) {
+    dealerHand.push(draw());
+  }
+  
+  const p = calculateScore(playerHand);
+  const d = calculateScore(dealerHand);
+  
+  if (d > 21) endGame("Dealer Busts! You Win!");
+  else if (p > d) endGame("You Win!");
+  else if (p < d) endGame("Dealer Wins.");
+  else endGame("Push (Tie)");
+  
   updateUI();
-  let p=value(player), d=value(dealer);
-  document.getElementById("result").innerText =
-    d>21||p>d ? "You win 😎" :
-    p==d     ? "Push / Tie 😐" :
-               "Dealer wins 😬";
+}
+
+function endGame(msg) {
+  isGameOver = true;
+  document.getElementById("result").innerText = msg;
+  document.getElementById("hit-btn").disabled = true;
+  document.getElementById("stand-btn").disabled = true;
 }
 
 resetGame();
 </script>
 </body>
 </html>
+
